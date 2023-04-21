@@ -1,6 +1,5 @@
 node_modules
-
-node_modules
+contracts-exposed
 .env
 coverage
 coverage.json
