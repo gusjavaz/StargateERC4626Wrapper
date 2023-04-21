@@ -2,12 +2,17 @@
 
 This is an ERC4626 Wrapper for Stargate Protocol
 
-## INstalling
+### Installing
 ```
 npm update
 ```
 
-## Testing
+If it complains of openzeppelin/contracts please install with 
+```
+npm i @openzeppelin/contracts
+```
+
+### Testing
 ```
 npx hardhat test
 ```
