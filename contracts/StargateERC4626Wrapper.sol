@@ -14,6 +14,30 @@ import "./external/Router.sol";
 contract StargateERC4626Wrapper is ERC4626 {
     using SafeMath for uint256;
 
+    uint8 internal constant TYPE_REDEEM_LOCAL_RESPONSE = 1;
+    uint8 internal constant TYPE_REDEEM_LOCAL_CALLBACK_RETRY = 2;
+    uint8 internal constant TYPE_SWAP_REMOTE_RETRY = 3;
+
+    //---------------------------------------------------------------------------
+    // STRUCTS
+    struct CachedSwap {
+        address token;
+        uint256 amountLD;
+        address to;
+        bytes payload;
+    }
+
+    //---------------------------------------------------------------------------
+    // VARIABLES
+    Factory public factory; // used for creating pools
+    address public protocolFeeOwner; // can call methods to pull Stargate fees collected in pools
+    address public mintFeeOwner; // can call methods to pull mint fees collected in pools
+    Bridge public bridge;
+    mapping(uint16 => mapping(bytes => mapping(uint256 => bytes)))
+        public revertLookup; //[chainId][srcAddress][nonce]
+    mapping(uint16 => mapping(bytes => mapping(uint256 => CachedSwap)))
+        public cachedSwapLookup; //[chainId][srcAddress][nonce]
+
     address public router;
     uint16 public poolId;
     ERC20 public underlying;
@@ -24,7 +48,7 @@ contract StargateERC4626Wrapper is ERC4626 {
         address _router,
         address _underlying,
         uint16 _poolId
-    ) ERC20("Token LP", "S*TOKEN") ERC4626(IERC20(_underlying)) {
+    ) ERC20("X", "S*X") ERC4626(IERC20(_underlying)) {
         router = _router;
         poolId = _poolId;
         underlying = ERC20(_underlying);
@@ -47,20 +71,6 @@ contract StargateERC4626Wrapper is ERC4626 {
         return shares;
     }
 
-    /** @dev See {IERC4626-redeem}. */
-    function redeem(
-        uint256 shares,
-        address receiver,
-        address owner
-    ) public virtual override returns (uint256) {
-        require(shares <= maxRedeem(owner), "ERC4626: redeem more than max");
-
-        uint256 assets = previewRedeem(shares);
-        _withdraw(_msgSender(), receiver, owner, assets, shares);
-
-        return assets;
-    }
-
     /** @dev See {IERC4626-withdraw}. */
     function withdraw(
         uint256 assets,
@@ -72,13 +82,22 @@ contract StargateERC4626Wrapper is ERC4626 {
             "ERC4626: withdraw more than max"
         );
         uint256 shares = previewWithdraw(assets);
-        Router(router).composableInstantRedeemLocal(
-            poolId,
-            assets,
-            receiver,
-            owner
-        );
+        LPTokenERC20(pool).approve(address(this), assets);
+        LPTokenERC20(pool).transferFrom(receiver, address(this), assets);
+        Router(router).instantRedeemLocal(poolId, assets, receiver);
         return shares;
+    }
+
+        /** @dev See {IERC4626-redeem}. */
+    function redeem(
+        uint256 shares,
+        address receiver,
+        address owner
+    ) public virtual override returns (uint256) {
+        require(shares <= maxRedeem(owner), "ERC4626: redeem more than max");
+        uint256 assets = previewRedeem(shares);
+        withdraw(assets, receiver, owner);
+        return assets;
     }
 
     function totalAssets() public view override returns (uint256) {
@@ -118,7 +137,6 @@ contract StargateERC4626Wrapper is ERC4626 {
         if (pool.totalLiquidity() == 0) return assets;
         return assets.mul(pool.totalLiquidity()).div(pool.totalSupply());
     }
-
 
     function maxDeposit(
         address

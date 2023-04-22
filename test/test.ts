@@ -31,6 +31,9 @@ describe("Stargate ERC4626 Wrapper", function () {
     beforeEach(async function () {
         if (hre.network.name=="hardhat"){
         [owner, user1, user2] = await ethers.getSigners();
+        console.log("owner", owner.address)
+        console.log("user1", user1.address);
+        console.log("user2", user2.address)
         const lzEndpoint = (await deployNew("LZEndpointMock", [chainId])) as LZEndpointMock
         router = await deployNew("Router", []) as Router
         factory = await deployNew("Factory", [router.address]) as Factory
@@ -59,6 +62,7 @@ describe("Stargate ERC4626 Wrapper", function () {
             true
         )
         pool = await ethers.getContractAt("Pool", await factory.getPool(1), owner)
+        console.log("Pool deployed at", pool.address);
         await router.setFees(poolId, 1000);
         } else {
             const factoryContract = "0x1dAC955a58f292b8d95c6EBc79d14D3E618971b2"
@@ -76,8 +80,6 @@ describe("Stargate ERC4626 Wrapper", function () {
         await underlying.connect(owner).mint(user1.address, amount)
         await underlying.connect(owner).mint(user2.address, amount)
         await underlying.connect(owner).approve(wrapper.address, amount)
-        await underlying.connect(user1).approve(wrapper.address, amount)
-        await underlying.connect(user2).approve(wrapper.address, amount)
     });
 
     describe("Router", function () {
@@ -85,33 +87,39 @@ describe("Stargate ERC4626 Wrapper", function () {
         it("Should deposit", async function () {
             const expectedShareBalance = (await wrapper.balanceOf(user1.address)).add(amount).sub(fee*BP_DENOMINATOR)
             const expectedTokenBalance = (await underlying.balanceOf(user1.address)).sub(amount)
-            await wrapper.deposit(amount, user1.address)
+            await underlying.connect(user1).approve(wrapper.address, amount)
+            await wrapper.connect(user1).deposit(amount, user1.address)
             expect(await wrapper.balanceOf(user1.address)).to.be.equal(expectedShareBalance)
             expect(await underlying.balanceOf(user1.address)).to.be.equal(expectedTokenBalance)
         });
 
         it("Should withdraw", async function () {
+            await underlying.connect(user1).approve(wrapper.address, amount)
             await wrapper.deposit(amount, user1.address)
             const expectedShareBalance = (await wrapper.balanceOf(user1.address)).sub(amount).add(fee*BP_DENOMINATOR)
             const expectedTokenBalance = (await underlying.balanceOf(user1.address)).add(amount).sub(fee*BP_DENOMINATOR)
+            await pool.connect(user1).approve(wrapper.address, amount);
             await wrapper.withdraw(amount-fee*BP_DENOMINATOR, user1.address, user1.address)
             expect(await wrapper.balanceOf(user1.address)).to.be.equal(expectedShareBalance)
             expect(await underlying.balanceOf(user1.address)).to.be.equal(expectedTokenBalance)
         });
 
         it("Should get totalAssets", async function () {
+            await underlying.connect(user1).approve(wrapper.address, amount)
             await wrapper.deposit(amount, user1.address)
             const expectedTotalAssets = amount
             expect(await wrapper.totalAssets()).to.be.equal(expectedTotalAssets)
         });
 
         it("Should preview redeem", async function () {
+            await underlying.connect(user1).approve(wrapper.address, amount)
             await wrapper.deposit(amount, user1.address)
             const expectedRedeemAmount = amount;
             expect(await wrapper.previewRedeem(amount)).to.be.equal(expectedRedeemAmount)
         });
 
         it("Should get max withdraw", async function () {
+            await underlying.connect(user1).approve(wrapper.address, amount)
             await wrapper.deposit(amount, user1.address)
             const expectedRedeemAmount = amount-fee*BP_DENOMINATOR;
             expect(await wrapper.maxWithdraw(user1.address)).to.be.equal(expectedRedeemAmount)

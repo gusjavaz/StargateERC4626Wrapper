@@ -169,16 +169,6 @@ contract Router is IStargateRouter, Ownable, ReentrancyGuard {
         amountSD = pool.instantRedeemLocal(msg.sender, _amountLP, _to);
     }
 
-    function composableInstantRedeemLocal(
-        uint16 _srcPoolId,
-        uint256 _amountLP,
-        address _to,
-        address _from
-    ) external nonReentrant returns (uint256 amountSD) {
-        require(_amountLP > 0, "Stargate: not enough lp to redeem");
-        Pool pool = _getPool(_srcPoolId);
-        amountSD = pool.instantRedeemLocal(_from, _amountLP, _to);
-    }
     function redeemLocal(
         uint16 _dstChainId,
         uint256 _srcPoolId,
