@@ -1,15 +1,10 @@
-# stargateERC4626Wrapper
+# Stargate ERC4626 Wrapper
 
-This is an ERC4626 Wrapper for Stargate Protocol
+This is an Wrapper for Stargate Protocol wich adapts to ERC-4626 standard
 
 ### Installing
 ```
 npm update
-```
-
-If it complains of openzeppelin/contracts please install with 
-```
-npm i @openzeppelin/contracts
 ```
 
 ### Testing
