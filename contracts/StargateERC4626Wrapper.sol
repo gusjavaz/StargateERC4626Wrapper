@@ -13,31 +13,6 @@ import "./external/Router.sol";
 
 contract StargateERC4626Wrapper is ERC4626 {
     using SafeMath for uint256;
-
-    uint8 internal constant TYPE_REDEEM_LOCAL_RESPONSE = 1;
-    uint8 internal constant TYPE_REDEEM_LOCAL_CALLBACK_RETRY = 2;
-    uint8 internal constant TYPE_SWAP_REMOTE_RETRY = 3;
-
-    //---------------------------------------------------------------------------
-    // STRUCTS
-    struct CachedSwap {
-        address token;
-        uint256 amountLD;
-        address to;
-        bytes payload;
-    }
-
-    //---------------------------------------------------------------------------
-    // VARIABLES
-    Factory public factory; // used for creating pools
-    address public protocolFeeOwner; // can call methods to pull Stargate fees collected in pools
-    address public mintFeeOwner; // can call methods to pull mint fees collected in pools
-    Bridge public bridge;
-    mapping(uint16 => mapping(bytes => mapping(uint256 => bytes)))
-        public revertLookup; //[chainId][srcAddress][nonce]
-    mapping(uint16 => mapping(bytes => mapping(uint256 => CachedSwap)))
-        public cachedSwapLookup; //[chainId][srcAddress][nonce]
-
     address public router;
     uint16 public poolId;
     ERC20 public underlying;
@@ -88,7 +63,7 @@ contract StargateERC4626Wrapper is ERC4626 {
         return shares;
     }
 
-        /** @dev See {IERC4626-redeem}. */
+    /** @dev See {IERC4626-redeem}. */
     function redeem(
         uint256 shares,
         address receiver,
@@ -104,22 +79,17 @@ contract StargateERC4626Wrapper is ERC4626 {
         return ERC20(underlying).balanceOf(address(pool));
     }
 
-    function balanceOf(
-        address account
-    ) public view virtual override(ERC20, IERC20) returns (uint256) {
-        return pool.balanceOf(account);
+    function convertToShares(
+        uint256 assets
+    ) public view virtual override returns (uint256 shares) {
+        if (pool.totalSupply() == 0) return 0;
+        return assets.mul(pool.totalLiquidity()).div(pool.totalSupply());
     }
 
-    function previewMint(
+    /** @dev See {IERC4626-convertToAssets}. */
+    function convertToAssets(
         uint256 shares
-    ) public view virtual override returns (uint256) {
-        if (pool.totalLiquidity() == 0) return 0;
-        return pool.amountLPtoLD(shares);
-    }
-
-    function previewRedeem(
-        uint256 shares
-    ) public view virtual override returns (uint256) {
+    ) public view virtual override returns (uint256 assets) {
         if (pool.totalLiquidity() == 0) return 0;
         return pool.amountLPtoLD(shares);
     }
@@ -127,28 +97,48 @@ contract StargateERC4626Wrapper is ERC4626 {
     function previewWithdraw(
         uint256 assets
     ) public view virtual override returns (uint256) {
-        if (pool.totalLiquidity() == 0) return assets;
-        return assets.mul(pool.totalLiquidity()).div(pool.totalSupply());
+        return convertToShares(assets);
+    }
+
+    /** @dev See {IERC4626-previewRedeem}. */
+    function previewRedeem(
+        uint256 shares
+    ) public view virtual override returns (uint256) {
+        return convertToAssets(shares);
     }
 
     function previewDeposit(
-        uint256 assets
+        uint256 shares
     ) public view virtual override returns (uint256) {
-        if (pool.totalLiquidity() == 0) return assets;
-        return assets.mul(pool.totalLiquidity()).div(pool.totalSupply());
+        return convertToShares(shares);
     }
 
+    function balanceOf(
+        address account
+    ) public view virtual override(ERC20, IERC20) returns (uint256) {
+        return pool.balanceOf(account);
+    }
+
+    /** @dev See {IERC4626-asset}. */
+    function asset() public view virtual override returns (address) {
+        return address(pool);
+    }
+
+    /** @dev See {IERC4626-maxDeposit}. */
     function maxDeposit(
         address
     ) public view virtual override returns (uint256) {
         return type(uint256).max;
     }
 
-    function maxWithdraw(
-        address owner
-    ) public view virtual override returns (uint256) {
-        if (pool.totalLiquidity() == 0) return 0;
-        return pool.amountLPtoLD(LPTokenERC20(pool).balanceOf(owner));
+    /** @dev See {IERC4626-maxWithdraw}. */
+    function maxWithdraw(address owner) public view virtual override returns (uint256) {
+        return convertToAssets(balanceOf(owner));
+    }
+
+    /** @dev See {IERC4626-maxRedeem}. */
+    function maxRedeem(address owner) public view virtual override returns (uint256) {
+        return balanceOf(owner);
     }
 
     function totalSupply()

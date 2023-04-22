@@ -6,8 +6,8 @@ export async function deployNew(contractName: string, params?: any[]) {
     const C = await ethers.getContractFactory(contractName)
     const contract = await C.deploy(...params!)
     await contract.deployed();
-    console.log("Contract", contractName, "deployed at", contract.address);
-    return contract;
+/*     console.log("Contract", contractName, "deployed at", contract.address);
+ */    return contract;
 }
 
 export async function callAsContract(contract: Contract, impersonateAddr: string, funcNameAsStr: string, params: any[], msgValue?: number) {
