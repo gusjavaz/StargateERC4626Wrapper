@@ -1,7 +1,4 @@
-import hre, { ethers, upgrades } from "hardhat";
-import { keccak256, toUtf8Bytes } from "ethers/lib/utils";
-
-
+import hre, { ethers } from "hardhat";
 
 async function main() {
   const otherValue = 100;

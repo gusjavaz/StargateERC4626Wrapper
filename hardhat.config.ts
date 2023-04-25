@@ -8,23 +8,24 @@ import "@nomiclabs/hardhat-ethers"
 const config: HardhatUserConfig = {
   defaultNetwork: "hardhat",
   networks: {
-    hardhat: { 
-      gas: 30000000 
+    hardhat: {
+      gas: 30000000
     },
     goerli: {
       url: "https://eth-goerli.public.blastapi.io",
-      accounts: [process.env.EXTERNAL!],
+      accounts: [process.env.EXTERNAL2!],
       chainId: 5,
-   },
-   arbitrum: {
-    url: "https://arbitrum-goerli.public.blastapi.io",
-    accounts: [process.env.EXTERNAL!],
-    chainId: 421613
-  }
+      gas: 300000
+    },
+    arbitrum: {
+      url: "https://arbitrum-goerli.public.blastapi.io",
+      accounts: [process.env.EXTERNAL2!],
+      chainId: 421613
+    }
   },
 
   solidity: {
-    version: "0.8.16", 
+    version: "0.8.16",
     settings: {
       optimizer: {
         enabled: true,
@@ -35,7 +36,7 @@ const config: HardhatUserConfig = {
   gasReporter: {
     enabled: true,
   },
-  
+
 };
 
 export default config;

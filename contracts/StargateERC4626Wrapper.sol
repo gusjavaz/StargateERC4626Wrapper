@@ -8,14 +8,12 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./external/interfaces/IStargateRouter.sol";
 import "./external/Factory.sol";
 import "./external/Pool.sol";
-import "./external/LPTokenERC20.sol";
-import "./external/Router.sol";
 
 contract StargateERC4626Wrapper is ERC4626 {
     using SafeMath for uint256;
     address public router;
     uint16 public poolId;
-    ERC20 public underlying;
+    address public underlying;
     Pool public pool;
 
     constructor(
@@ -26,7 +24,7 @@ contract StargateERC4626Wrapper is ERC4626 {
     ) ERC20("X", "S*X") ERC4626(IERC20(_underlying)) {
         router = _router;
         poolId = _poolId;
-        underlying = ERC20(_underlying);
+        underlying = _underlying;
         pool = Factory(_factory).getPool(poolId);
     }
 
@@ -57,9 +55,9 @@ contract StargateERC4626Wrapper is ERC4626 {
             "ERC4626: withdraw more than max"
         );
         uint256 shares = previewWithdraw(assets);
-        LPTokenERC20(pool).approve(address(this), assets);
-        LPTokenERC20(pool).transferFrom(receiver, address(this), assets);
-        Router(router).instantRedeemLocal(poolId, assets, receiver);
+        pool.approve(address(this), assets);
+        pool.transferFrom(receiver, address(this), assets);
+        IStargateRouter(router).instantRedeemLocal(poolId, assets, receiver);
         return shares;
     }
 
@@ -148,6 +146,6 @@ contract StargateERC4626Wrapper is ERC4626 {
         override(ERC20, IERC20)
         returns (uint256)
     {
-        return LPTokenERC20(pool).totalSupply();
+        return pool.totalSupply();
     }
 }

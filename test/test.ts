@@ -31,21 +31,20 @@ describe("Stargate ERC4626 Wrapper", function () {
     let defaultChainPathWeight = 1
 
     beforeEach(async function () {
+        [owner, user1, user2] = await ethers.getSigners();
         if (hre.network.name == "hardhat") {
-            [owner, user1, user2] = await ethers.getSigners();
             const lzEndpoint = (await deployNew("LZEndpointMock", [chainId])) as LZEndpointMock
             router = await deployNew("Router", []) as Router
             factory = await deployNew("Factory", [router.address]) as Factory
             const feeLibrary = await deployNew("StargateFeeLibraryV02", [factory.address])
             const bridge = await deployNew("Bridge", [lzEndpoint.address, router.address])
-            await bridge.setBridge(chainId, bridge.address);
             await lzEndpoint.setDestLzEndpoint(bridge.address, lzEndpoint.address)
             underlying = await deployNew("MockToken", [underlyingName, underlyingSymbol, sharedDecimals]) as MockToken
             await callAsContract(factory, router.address, "createPool(uint256,address,uint8,uint8,string,string)", [
                 poolId,
                 underlying.address,
-                sharedDecimals,
-                localDecimals,
+                await underlying.decimals(),
+                await underlying.decimals(),
                 await underlying.name(),
                 await underlying.symbol(),
             ])
@@ -60,10 +59,12 @@ describe("Stargate ERC4626 Wrapper", function () {
                 true,
                 true
             )
-            pool = await ethers.getContractAt("Pool", await factory.getPool(1), owner)
-            await router.setFees(poolId, 1000);
-        }
-        if (hre.network.name == "arbitrum-goerli") {
+            pool = await ethers.getContractAt("Pool", await factory.getPool(1), owner) as Pool;
+            await router.setFees(poolId, fee);
+            await underlying.connect(owner).mint(user1.address, amount)
+            await underlying.connect(owner).mint(user2.address, amount)
+            }
+        else  {
             const factoryContract = "0x1dAC955a58f292b8d95c6EBc79d14D3E618971b2"
             const routerContract = "0xb850873f4c993Ac2405A1AdD71F6ca5D4d4d6b4f"
             const tokenContract = "0x6aAd876244E7A1Ad44Ec4824Ce813729E5B6C291" //USDC
@@ -71,11 +72,11 @@ describe("Stargate ERC4626 Wrapper", function () {
             factory = await ethers.getContractAt("Factory", factoryContract, owner);
             router = await ethers.getContractAt("IStargateRouter", routerContract, owner) as Router;
             underlying = await ethers.getContractAt("IERC20", tokenContract, owner) as MockToken;
+            pool = await ethers.getContractAt("Pool", await factory.getPool(1), owner) as Pool;
+            user1 = owner
+            fee = 0
         }
-
         wrapper = await deployNew("StargateERC4626Wrapper", [factory.address, router.address, underlying.address, poolId]) as StargateERC4626Wrapper;
-        await underlying.connect(owner).mint(user1.address, amount)
-        await underlying.connect(owner).mint(user2.address, amount)
         await underlying.connect(owner).approve(wrapper.address, amount)
     });
 
@@ -100,9 +101,9 @@ describe("Stargate ERC4626 Wrapper", function () {
     });
 
     it("Should get totalAssets", async function () {
+        const expectedTotalAssets = (await underlying.balanceOf(pool.address)).add(amount)
         await underlying.connect(user1).approve(wrapper.address, amount)
         await wrapper.deposit(amount, user1.address)
-        const expectedTotalAssets = amount
         expect(await wrapper.totalAssets()).to.be.equal(expectedTotalAssets)
     });
 
