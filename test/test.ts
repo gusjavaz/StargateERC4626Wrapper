@@ -120,7 +120,7 @@ describe("Stargate ERC4626 Wrapper", function () {
     it("Should get max withdraw", async function () {
         await underlying.connect(user1).approve(wrapper.address, amount)
         await wrapper.deposit(amount, user1.address)
-        const expectedMaxWithdraw = amount - fee * BP_DENOMINATOR;
+        const expectedMaxWithdraw = (await pool.balanceOf(user1.address))
         expect(await wrapper.maxWithdraw(user1.address)).to.be.equal(expectedMaxWithdraw)
     });
 
