@@ -9,7 +9,7 @@ dotenv.config()
 
 describe("Stargate ERC4626 Wrapper", function () {
     let factory: Factory
-    let underlying: MockToken
+    let underlying: any
     let wrapper: StargateERC4626Wrapper
     let router: Router
     let pool: Pool
@@ -61,12 +61,11 @@ describe("Stargate ERC4626 Wrapper", function () {
             )
             await router.setFees(poolId, fee);
             await underlying.connect(owner).mint(user1.address, amount)
-            await underlying.connect(owner).mint(user2.address, amount)
         }
         else {
             factory = await ethers.getContractAt("Factory", process.env.STARGATE_FACTORY_CONTRACT_ADDRESS!, owner);
             router = await ethers.getContractAt("IStargateRouter", process.env.STARGATE_ROUTER_CONTRACT_ADDRESS!, owner) as Router;
-            underlying = await ethers.getContractAt("IERC20", process.env.STARGATE_UNDERLYING_CONTRACT_ADDRESS!, owner) as MockToken;
+            underlying = await ethers.getContractAt("IERC20", process.env.STARGATE_UNDERLYING_CONTRACT_ADDRESS!, owner) as ERC20;
             poolId = parseInt(process.env.STARGATE_POOL_ID!)
             user1 = owner
             fee = 0
