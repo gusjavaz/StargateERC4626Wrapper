@@ -77,6 +77,7 @@ contract StargateERC4626Wrapper is ERC4626 {
         return ERC20(underlying).balanceOf(address(pool));
     }
 
+    /** @dev See {IERC4626-convertToShares}. */
     function convertToShares(
         uint256 assets
     ) public view virtual override returns (uint256 shares) {

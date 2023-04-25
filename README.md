@@ -9,6 +9,16 @@ npm update
 ```
 
 ### Testing
+#### Local
 ```
 npx hardhat test
 ```
+#### Testnet
+1. Create an .env file at the root of the project with content from .env.sample.arbitrum-goerli
+2. Export PRIVATE_KEY env variable with connection private key
+3. Mint some USDC from https://goerli.arbiscan.io/token/0x6aAd876244E7A1Ad44Ec4824Ce813729E5B6C291
+
+```
+npx hardhat test --network arbitrum
+```
+If using a testnet different than arbitrum please replace the addresses in .env file with corresponding ones from https://stargateprotocol.gitbook.io/stargate/developers/contract-addresses/testnet, also add the testnet network to hardhat.config.ts

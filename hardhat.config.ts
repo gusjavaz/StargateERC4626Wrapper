@@ -4,7 +4,6 @@ import "hardhat-gas-reporter";
 import "@nomiclabs/hardhat-etherscan";
 import "@nomiclabs/hardhat-ethers"
 
-
 const config: HardhatUserConfig = {
   defaultNetwork: "hardhat",
   networks: {
@@ -13,13 +12,13 @@ const config: HardhatUserConfig = {
     },
     goerli: {
       url: "https://eth-goerli.public.blastapi.io",
-      accounts: [process.env.EXTERNAL2!],
+      accounts: [process.env.PRIVATE_KEY!],
       chainId: 5,
       gas: 300000
     },
     arbitrum: {
       url: "https://arbitrum-goerli.public.blastapi.io",
-      accounts: [process.env.EXTERNAL2!],
+      accounts: [process.env.PRIVATE_KEY!],
       chainId: 421613
     }
   },

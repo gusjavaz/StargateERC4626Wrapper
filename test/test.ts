@@ -1,11 +1,11 @@
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
-import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
 import { expect } from "chai";
-import hre, { ethers, network } from "hardhat";
-import { BigNumber, Contract, ContractReceipt, ContractTransaction, Wallet } from "ethers";
+import hre, { ethers } from "hardhat";
+import { BigNumber } from "ethers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { StargateERC4626Wrapper, MockToken, Pool, Router, LZEndpointMock, Factory, IERC20, ERC20 } from "../typechain-types";
 import { callAsContract, deployNew } from "./utils";
+import * as dotenv from 'dotenv'
+dotenv.config()
 
 describe("Stargate ERC4626 Wrapper", function () {
     let factory: Factory
@@ -59,23 +59,19 @@ describe("Stargate ERC4626 Wrapper", function () {
                 true,
                 true
             )
-            pool = await ethers.getContractAt("Pool", await factory.getPool(1), owner) as Pool;
             await router.setFees(poolId, fee);
             await underlying.connect(owner).mint(user1.address, amount)
             await underlying.connect(owner).mint(user2.address, amount)
-            }
-        else  {
-            const factoryContract = "0x1dAC955a58f292b8d95c6EBc79d14D3E618971b2"
-            const routerContract = "0xb850873f4c993Ac2405A1AdD71F6ca5D4d4d6b4f"
-            const tokenContract = "0x6aAd876244E7A1Ad44Ec4824Ce813729E5B6C291" //USDC
-            const poolId = 1;
-            factory = await ethers.getContractAt("Factory", factoryContract, owner);
-            router = await ethers.getContractAt("IStargateRouter", routerContract, owner) as Router;
-            underlying = await ethers.getContractAt("IERC20", tokenContract, owner) as MockToken;
-            pool = await ethers.getContractAt("Pool", await factory.getPool(1), owner) as Pool;
+        }
+        else {
+            factory = await ethers.getContractAt("Factory", process.env.STARGATE_FACTORY_CONTRACT_ADDRESS!, owner);
+            router = await ethers.getContractAt("IStargateRouter", process.env.STARGATE_ROUTER_CONTRACT_ADDRESS!, owner) as Router;
+            underlying = await ethers.getContractAt("IERC20", process.env.STARGATE_UNDERLYING_CONTRACT_ADDRESS!, owner) as MockToken;
+            poolId = parseInt(process.env.STARGATE_POOL_ID!)
             user1 = owner
             fee = 0
         }
+        pool = await ethers.getContractAt("Pool", await factory.getPool(poolId), owner) as Pool;
         wrapper = await deployNew("StargateERC4626Wrapper", [factory.address, router.address, underlying.address, poolId]) as StargateERC4626Wrapper;
         await underlying.connect(owner).approve(wrapper.address, amount)
     });
